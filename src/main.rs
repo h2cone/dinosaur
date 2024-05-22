@@ -1,6 +1,6 @@
 use bevy::DefaultPlugins;
 use bevy::prelude::*;
-use bevy::window::PresentMode;
+use bevy::window::{PresentMode, WindowMode, WindowResolution};
 use bevy_rapier2d::prelude::*;
 
 const WIN_WIDTH: f32 = 640.;
@@ -11,24 +11,23 @@ const FLOOR_HEIGHT: f32 = WIN_HEIGHT * 0.3;
 fn main() {
     App::new()
         .add_plugins(DefaultPlugins.set(WindowPlugin {
-            window: WindowDescriptor {
+            primary_window: Some(Window {
                 title: "Dinosaur".to_string(),
-                width: WIN_WIDTH,
-                height: WIN_HEIGHT,
+                resolution: WindowResolution::new(WIN_WIDTH, WIN_HEIGHT),
                 present_mode: PresentMode::AutoVsync,
                 mode: WindowMode::Windowed,
                 ..default()
-            },
+            }),
             ..default()
         }))
         .insert_resource(ClearColor(Color::WHITE))
-        .add_plugin(RapierPhysicsPlugin::<NoUserData>::default())
-        .add_plugin(RapierDebugRenderPlugin::default())
-        .add_startup_system(setup)
-        .add_system(camera_follow_player)
-        .add_system(player_movement)
-        .add_system(player_jump)
-        .add_system(jump_reset)
+        .add_plugins(RapierPhysicsPlugin::<NoUserData>::default())
+        .add_plugins(RapierDebugRenderPlugin::default())
+        .add_systems(Startup, setup)
+        .add_systems(Update, camera_follow_player)
+        .add_systems(Update, player_movement)
+        .add_systems(Update, player_jump)
+        .add_systems(Update, jump_reset)
         .run();
 }
 
@@ -81,7 +80,7 @@ fn setup(mut commands: Commands) {
         .insert(Velocity::zero())
         .insert(Transform::from_translation(Vec3::new(0., (player.height - WIN_HEIGHT) / 2. + FLOOR_HEIGHT, 0.)))
         .insert(LockedAxes::ROTATION_LOCKED)
-        .insert(GravityScale(1.))
+        .insert(GravityScale(10.))
         .insert(Ccd::enabled())
         .insert(Collider::round_cuboid(player.width / 2., player.height / 2., 0.))
         .insert(ActiveEvents::COLLISION_EVENTS)
@@ -93,25 +92,25 @@ fn setup(mut commands: Commands) {
 }
 
 fn player_movement(
-    input: Res<Input<KeyCode>>,
+    input: Res<ButtonInput<KeyCode>>,
     mut query: Query<(&mut Velocity, &Player), With<Player>>,
 ) {
     for (mut vel, player) in query.iter_mut() {
-        if input.pressed(KeyCode::Left) {
+        if input.pressed(KeyCode::ArrowLeft) {
             vel.linvel = Vect::new(-player.speed, vel.linvel.y);
         }
-        if input.pressed(KeyCode::Right) {
+        if input.pressed(KeyCode::ArrowRight) {
             vel.linvel = Vect::new(player.speed, vel.linvel.y);
         }
     }
 }
 
 fn player_jump(
-    input: Res<Input<KeyCode>>,
+    input: Res<ButtonInput<KeyCode>>,
     mut query: Query<(&mut Velocity, &mut Jumper), With<Player>>,
 ) {
     for (mut vel, mut jumper) in query.iter_mut() {
-        if input.pressed(KeyCode::Up) && !jumper.jumping {
+        if input.pressed(KeyCode::ArrowUp) && !jumper.jumping {
             vel.linvel = Vect::new(vel.linvel.x, jumper.speed);
             jumper.jumping = true;
         }
@@ -122,7 +121,7 @@ fn jump_reset(
     mut events: EventReader<CollisionEvent>,
     mut query: Query<(Entity, &mut Jumper), With<Player>>,
 ) {
-    for event in events.iter() {
+    for event in events.read() {
         for (entity, mut jumper) in query.iter_mut() {
             if let CollisionEvent::Started(entity1, entity2, _flag) = event {
                 if entity1 == &entity || entity2 == &entity {
