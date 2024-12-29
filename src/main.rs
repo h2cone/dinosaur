@@ -1,11 +1,12 @@
-use bevy::DefaultPlugins;
 use bevy::prelude::*;
 use bevy::window::{PresentMode, WindowMode, WindowResolution};
+use bevy::DefaultPlugins;
 use bevy_rapier2d::prelude::*;
 
 const WIN_WIDTH: f32 = 640.;
 const WIN_HEIGHT: f32 = 400.;
 
+const FLOOR_WIDTH: f32 = WIN_WIDTH * 2.;
 const FLOOR_HEIGHT: f32 = WIN_HEIGHT * 0.3;
 
 fn main() {
@@ -47,17 +48,21 @@ struct Jumper {
 fn setup(mut commands: Commands) {
     commands.spawn(Camera2dBundle::default());
     // Floor
-    commands.spawn(SpriteBundle {
-        sprite: Sprite {
-            color: Color::GRAY,
-            custom_size: Some(Vec2::new(WIN_WIDTH * 2., FLOOR_HEIGHT)),
+    commands
+        .spawn(SpriteBundle {
+            sprite: Sprite {
+                color: Color::GRAY,
+                custom_size: Some(Vec2::new(FLOOR_WIDTH, FLOOR_HEIGHT)),
+                ..default()
+            },
             ..default()
-        },
-        ..default()
-    })
+        })
         .insert(RigidBody::Fixed)
-        .insert(TransformBundle::from(Transform::from_translation(Vec3::new(0., (FLOOR_HEIGHT - WIN_HEIGHT) / 2., 0.))))
-        .insert(Collider::cuboid((WIN_WIDTH / 2.) * 2., FLOOR_HEIGHT / 2.))
+        // if y>0 and y+FH/2=WH/2 then y=(WH-FH)/2 -> -y=(FH-WH)/2
+        .insert(TransformBundle::from(Transform::from_translation(
+            Vec3::new(0., (FLOOR_HEIGHT - WIN_HEIGHT) / 2., 0.),
+        )))
+        .insert(Collider::cuboid(FLOOR_WIDTH / 2., FLOOR_HEIGHT / 2.))
         .insert(Friction {
             coefficient: 5.,
             ..default()
@@ -68,21 +73,31 @@ fn setup(mut commands: Commands) {
         width: 50.,
         height: 50.,
     };
-    commands.spawn(SpriteBundle {
-        sprite: Sprite {
-            color: Color::BLACK,
-            custom_size: Some(Vec2::new(player.width, player.height)),
+    commands
+        .spawn(SpriteBundle {
+            sprite: Sprite {
+                color: Color::BLACK,
+                custom_size: Some(Vec2::new(player.width, player.height)),
+                ..default()
+            },
             ..default()
-        },
-        ..default()
-    })
+        })
         .insert(RigidBody::Dynamic)
         .insert(Velocity::zero())
-        .insert(Transform::from_translation(Vec3::new(0., (player.height - WIN_HEIGHT) / 2. + FLOOR_HEIGHT, 0.)))
+        // if y>0 and y+PH/2+FH=WH/2 then y=(WH-PH/2)-FH -> -y=(PH-WH/2)+FH
+        .insert(Transform::from_translation(Vec3::new(
+            0.,
+            (player.height - WIN_HEIGHT) / 2. + FLOOR_HEIGHT,
+            0.,
+        )))
         .insert(LockedAxes::ROTATION_LOCKED)
         .insert(GravityScale(10.))
         .insert(Ccd::enabled())
-        .insert(Collider::round_cuboid(player.width / 2., player.height / 2., 0.))
+        .insert(Collider::round_cuboid(
+            player.width / 2.,
+            player.height / 2.,
+            0.,
+        ))
         .insert(ActiveEvents::COLLISION_EVENTS)
         .insert(player)
         .insert(Jumper {
