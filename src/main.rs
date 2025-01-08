@@ -46,22 +46,21 @@ struct Jumper {
 }
 
 fn setup(mut commands: Commands) {
-    commands.spawn(Camera2dBundle::default());
+    commands.spawn(Camera2d::default());
     // Floor
     commands
-        .spawn(SpriteBundle {
-            sprite: Sprite {
-                color: Color::GRAY,
-                custom_size: Some(Vec2::new(FLOOR_WIDTH, FLOOR_HEIGHT)),
-                ..default()
-            },
+        .spawn(Sprite {
+            color: Color::linear_rgb(0.5, 0.5, 0.5),
+            custom_size: Some(Vec2::new(FLOOR_WIDTH, FLOOR_HEIGHT)),
             ..default()
         })
         .insert(RigidBody::Fixed)
         // if y>0 and y+FH/2=WH/2 then y=(WH-FH)/2 -> -y=(FH-WH)/2
-        .insert(TransformBundle::from(Transform::from_translation(
-            Vec3::new(0., (FLOOR_HEIGHT - WIN_HEIGHT) / 2., 0.),
-        )))
+        .insert(Transform::from(Transform::from_translation(Vec3::new(
+            0.,
+            (FLOOR_HEIGHT - WIN_HEIGHT) / 2.,
+            0.,
+        ))))
         .insert(Collider::cuboid(FLOOR_WIDTH / 2., FLOOR_HEIGHT / 2.))
         .insert(Friction {
             coefficient: 5.,
@@ -74,12 +73,9 @@ fn setup(mut commands: Commands) {
         height: 50.,
     };
     commands
-        .spawn(SpriteBundle {
-            sprite: Sprite {
-                color: Color::BLACK,
-                custom_size: Some(Vec2::new(player.width, player.height)),
-                ..default()
-            },
+        .spawn(Sprite {
+            color: Color::BLACK,
+            custom_size: Some(Vec2::new(player.width, player.height)),
             ..default()
         })
         .insert(RigidBody::Dynamic)
